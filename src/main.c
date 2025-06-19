@@ -40,5 +40,13 @@ int main() {
         perror(message);
     }
 
+    char request[] = "GET / HTTP/1.1\r\nHost: 127.0.0.1:8000\r\n\r\n";
+    send(descriptor, request, sizeof(request), 0);
+
+    char response[128];
+    recv(descriptor, response, sizeof(response), 0);
+
+    printf("%s", response);
+
     return 0;
 }
