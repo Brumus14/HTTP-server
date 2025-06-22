@@ -2,6 +2,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <unistd.h>
 
 struct sockaddr_in generate_address(unsigned char ip[4], unsigned short port) {
     return (struct sockaddr_in){
@@ -19,11 +20,13 @@ int main() {
 
     if (descriptor == -1) {
         printf("Failed to create socket");
+        return 1;
     }
 
     // Form the address for the socket to connect to
-    unsigned char ip[4] = {127, 0, 0, 1};
-    unsigned short port = 8000;
+    // 146.190.62.39
+    unsigned char ip[4] = {146, 190, 62, 39};
+    unsigned short port = 80;
     struct sockaddr_in address = generate_address(ip, port);
 
     // Attempt to connect the socket to the address
@@ -38,15 +41,25 @@ int main() {
 
         // Output the error from the connect attempt with the generated message
         perror(message);
+
+        return 1;
     }
 
-    char request[] = "GET / HTTP/1.1\r\nHost: 127.0.0.1:8000\r\n\r\n";
-    send(descriptor, request, sizeof(request), 0);
+    char request[] =
+        "GET /index.html HTTP/1.1\r\nHost: www.httpforever.com\r\n\r\n";
+    send(descriptor, request, sizeof(request) - 1, 0);
 
-    char response[128];
-    recv(descriptor, response, sizeof(response), 0);
+    char response_buffer[512 + 1];
+    int bytes_recieved = 0;
 
-    printf("%s", response);
+    while ((bytes_recieved = recv(descriptor, response_buffer,
+                                  sizeof(response_buffer), 0)) > 0) {
+        response_buffer[bytes_recieved] = '\0';
+        printf("    %d    %s", bytes_recieved, response_buffer);
+    }
+
+    shutdown(descriptor, SHUT_RDWR);
+    close(descriptor);
 
     return 0;
 }
