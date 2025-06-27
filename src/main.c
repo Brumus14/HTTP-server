@@ -29,9 +29,11 @@ int main() {
     unsigned short port = 8000;
     struct sockaddr_in address = generate_address(ip, port);
 
+    // Try to bind the socket to the address generated
     int bind_result =
         bind(descriptor, (struct sockaddr *)&address, sizeof(address));
 
+    // Error message if binding failed
     if (bind_result == -1) {
         char error_message[43 + 1];
         sprintf(error_message, "Error binding to %d.%d.%d.%d port %d", ip[0],
@@ -40,6 +42,10 @@ int main() {
         perror(error_message);
     }
 
+    printf("Socket is bound to %d.%d.%d.%d port %d\n", ip[0], ip[1], ip[2],
+           ip[3], port);
+
+    // Shutdown and close the socket as not needed anymore
     shutdown(descriptor, SHUT_RDWR);
     close(descriptor);
 
