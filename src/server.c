@@ -4,6 +4,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 struct sockaddr_in generate_address(unsigned char ip[4], unsigned short port) {
     return (struct sockaddr_in){
@@ -44,6 +45,26 @@ int main() {
 
     printf("Socket is bound to %d.%d.%d.%d port %d\n", ip[0], ip[1], ip[2],
            ip[3], port);
+
+    listen(descriptor, 4);
+
+    struct sockaddr client;
+    socklen_t client_length = sizeof(client);
+
+    printf("Listening for client conncetions\n");
+
+    while (true) {
+        accept(descriptor, &client, &client_length);
+
+        pid_t pid = fork();
+
+        if (pid == 0) {
+            // Child
+            printf("Connected to client\n");
+        } else if (pid > 0) {
+            // Parent
+        }
+    }
 
     // Shutdown and close the socket as not needed anymore
     shutdown(descriptor, SHUT_RDWR);
