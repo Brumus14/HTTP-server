@@ -16,9 +16,9 @@ struct sockaddr_in generate_address(unsigned char ip[4], unsigned short port) {
 
 int main() {
     // Create the TCP network socket
-    int descriptor = socket(AF_INET, SOCK_STREAM, 0);
+    int client = socket(AF_INET, SOCK_STREAM, 0);
 
-    if (descriptor == -1) {
+    if (client == -1) {
         printf("Failed to create socket");
         return 1;
     }
@@ -30,7 +30,7 @@ int main() {
 
     // Attempt to connect the socket to the address
     int connect_result =
-        connect(descriptor, (struct sockaddr *)&address, sizeof(address));
+        connect(client, (struct sockaddr *)&address, sizeof(address));
 
     if (connect_result == -1) {
         // Generate an error message with the IP and port
@@ -46,21 +46,27 @@ int main() {
         printf("Connected\n");
     }
 
+    char message[13 + 1];
+    recv(client, message, 13 + 1, 0);
+    message[13] = '\0';
+
+    printf("%s", message);
+
     // char request[] =
     //     "GET /index.html HTTP/1.1\r\nHost: www.httpforever.com\r\n\r\n";
-    // send(descriptor, request, sizeof(request) - 1, 0);
+    // send(client, request, sizeof(request) - 1, 0);
     //
     // char response_buffer[512 + 1];
     // int bytes_recieved = 0;
     //
-    // while ((bytes_recieved = recv(descriptor, response_buffer,
+    // while ((bytes_recieved = recv(client, response_buffer,
     //                               sizeof(response_buffer), 0)) > 0) {
     //     response_buffer[bytes_recieved] = '\0';
     //     printf("    %d    %s", bytes_recieved, response_buffer);
     // }
 
-    shutdown(descriptor, SHUT_RDWR);
-    close(descriptor);
+    shutdown(client, SHUT_RDWR);
+    close(client);
 
     return 0;
 }

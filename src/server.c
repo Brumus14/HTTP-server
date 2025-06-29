@@ -1,10 +1,16 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <unistd.h>
 #include <stdbool.h>
+
+void handle_client(int client) {
+    char *message = "Hello, world!";
+    send(client, message, 13, 0);
+}
 
 struct sockaddr_in generate_address(unsigned char ip[4], unsigned short port) {
     return (struct sockaddr_in){
@@ -18,9 +24,9 @@ struct sockaddr_in generate_address(unsigned char ip[4], unsigned short port) {
 
 int main() {
     // Create the TCP network socket
-    int descriptor = socket(PF_INET, SOCK_STREAM, 0);
+    int server = socket(PF_INET, SOCK_STREAM, 0);
 
-    if (descriptor == -1) {
+    if (server == -1) {
         printf("Failed to create socket");
         return 1;
     }
@@ -32,7 +38,7 @@ int main() {
 
     // Try to bind the socket to the address generated
     int bind_result =
-        bind(descriptor, (struct sockaddr *)&address, sizeof(address));
+        bind(server, (struct sockaddr *)&address, sizeof(address));
 
     // Error message if binding failed
     if (bind_result == -1) {
@@ -46,29 +52,38 @@ int main() {
     printf("Socket is bound to %d.%d.%d.%d port %d\n", ip[0], ip[1], ip[2],
            ip[3], port);
 
-    listen(descriptor, 4);
+    listen(server, 4);
 
-    struct sockaddr client;
-    socklen_t client_length = sizeof(client);
+    struct sockaddr client_address;
+    socklen_t client_length = sizeof(client_address);
 
-    printf("Listening for client conncetions\n");
+    printf("Listening for client connections\n");
 
     while (true) {
-        accept(descriptor, &client, &client_length);
+        int client = accept(server, &client_address, &client_length);
 
         pid_t pid = fork();
 
         if (pid == 0) {
             // Child
             printf("Connected to client\n");
+            close(server);
+
+            handle_client(client);
+
+            close(client);
+            printf("Disconnected from child\n");
+
+            exit(0);
         } else if (pid > 0) {
             // Parent
+            close(client);
         }
     }
 
     // Shutdown and close the socket as not needed anymore
-    shutdown(descriptor, SHUT_RDWR);
-    close(descriptor);
+    shutdown(server, SHUT_RDWR);
+    close(server);
 
     return 0;
 }
