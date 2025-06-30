@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -24,8 +25,8 @@ int main() {
     }
 
     // Form the address for the socket to connect to
-    unsigned char ip[4] = {127, 0, 0, 1};
-    unsigned short port = 8000;
+    uint8_t ip[4] = {127, 0, 0, 1};
+    uint16_t port = 8000;
     struct sockaddr_in address = generate_address(ip, port);
 
     // Attempt to connect the socket to the address
@@ -52,20 +53,6 @@ int main() {
 
     printf("%s", message);
 
-    // char request[] =
-    //     "GET /index.html HTTP/1.1\r\nHost: www.httpforever.com\r\n\r\n";
-    // send(client, request, sizeof(request) - 1, 0);
-    //
-    // char response_buffer[512 + 1];
-    // int bytes_recieved = 0;
-    //
-    // while ((bytes_recieved = recv(client, response_buffer,
-    //                               sizeof(response_buffer), 0)) > 0) {
-    //     response_buffer[bytes_recieved] = '\0';
-    //     printf("    %d    %s", bytes_recieved, response_buffer);
-    // }
-
-    shutdown(client, SHUT_RDWR);
     close(client);
 
     return 0;
