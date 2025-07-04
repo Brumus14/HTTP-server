@@ -1,5 +1,6 @@
 #include "server.h"
 
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/select.h>
@@ -10,6 +11,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "helper.h"
+#include "request.h"
 
 int server_init(int *server) {
     // Create the TCP network socket
@@ -102,7 +104,50 @@ void server_close(int server) {
     close(server);
 }
 
+void parse_request_line(http_request *request, char *line) {
+    char *method = strtok(line, " ");
+    char *target = strtok(NULL, " ");
+    char *version = strtok(NULL, " ");
+
+    request->method = string_to_method(method);
+    request->target = target;
+    request->version = atof(version + 5);
+
+    printf("%s - %s - %s\n", method, target, version);
+}
+
 void handle_client(int client) {
-    char *message = "Hello, world!";
-    send(client, message, 13, 0);
+    char *request_content = NULL;
+    char request_buffer[1024];
+
+    int request_size = 0;
+
+    // TODO: Handle two requests that were both recieved at same time
+    do {
+        int recieved_size =
+            recv(client, request_buffer, sizeof(request_buffer), 0);
+        request_content =
+            realloc(request_content, request_size + recieved_size + 1);
+        memcpy(request_content + request_size, request_buffer, recieved_size);
+        request_size += recieved_size;
+        request_content[request_size] = '\0';
+    } while (strstr(request_content, "\r\n\r\n") == NULL);
+
+    http_request request;
+
+    char *line = request_content;
+    char *end;
+
+    while ((end = strstr(line, "\r\n")) != NULL) {
+        *end = '\0';
+
+        if (line == request_content) {
+            parse_request_line(&request, line);
+        } else {
+        }
+
+        line = end + 2;
+    }
+
+    free(request_content);
 }
