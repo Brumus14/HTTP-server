@@ -47,14 +47,7 @@ int main() {
         printf("Connected\n");
     }
 
-    // char message[13 + 1];
-    // recv(client, message, 13 + 1, 0);
-    // message[13] = '\0';
-    //
-    // printf("%s", message);
-
-    char request[] =
-        "GET /index.html HTTP/1.1\r\nsecond lien yoo\r\nturd lein?????\r\n\r\n";
+    char request[] = "GET /index.html HTTP/1.1\r\n\r\n";
 
     send(client, request, sizeof(request), 0);
 

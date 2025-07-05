@@ -1,5 +1,6 @@
 #include "server.h"
 
+#include <asm-generic/socket.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,6 +22,10 @@ int server_init(int *server) {
         printf("Failed to create socket");
         return 1;
     }
+
+    int reuse_address = 1;
+    setsockopt(*server, SOL_SOCKET, SO_REUSEADDR, &reuse_address,
+               sizeof(reuse_address));
 
     return 0;
 }
@@ -113,7 +118,25 @@ void parse_request_line(http_request *request, char *line) {
     request->target = target;
     request->version = atof(version + 5);
 
-    printf("%s - %s - %s\n", method, target, version);
+    printf("%s - %f\n", version, request->version);
+}
+
+void parse_field_line(http_request *request, char *line) {
+    int line_end = strlen(line) - 1;
+
+    while (line[line_end] == ' ' || line[line_end] == '\t') {
+        line_end--;
+    }
+
+    line[line_end + 1] = '\0';
+
+    char *name = line;
+    *strchr(line, ':') = '\0';
+
+    char *value = name + strlen(name) + 1;
+    value += strspn(value, " \t");
+
+    http_request_add_field(request, (http_field){name, value});
 }
 
 void handle_client(int client) {
@@ -134,6 +157,9 @@ void handle_client(int client) {
     } while (strstr(request_content, "\r\n\r\n") == NULL);
 
     http_request request;
+    http_request_init(&request);
+
+    printf("%s\n", request_content);
 
     char *line = request_content;
     char *end;
@@ -144,10 +170,16 @@ void handle_client(int client) {
         if (line == request_content) {
             parse_request_line(&request, line);
         } else {
+            parse_field_line(&request, line);
         }
 
         line = end + 2;
+
+        if (*line == '\r') {
+            break;
+        }
     }
 
+    http_request_destroy(&request);
     free(request_content);
 }
