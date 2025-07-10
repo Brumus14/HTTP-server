@@ -19,10 +19,11 @@ int server_init(int *server) {
     *server = socket(PF_INET, SOCK_STREAM, 0);
 
     if (*server == -1) {
-        printf("Failed to create socket");
+        fprintf(stderr, "Failed to create socket");
         return 1;
     }
 
+    // Allow the server to reuse the address if old socket is on timeout
     int reuse_address = 1;
     setsockopt(*server, SOL_SOCKET, SO_REUSEADDR, &reuse_address,
                sizeof(reuse_address));
@@ -34,7 +35,7 @@ int server_bind(int server) {
     // Form the address for the socket to connect to
     uint8_t ip[4] = {0, 0, 0, 0};
     uint16_t port = 8000;
-    struct sockaddr_in address = generate_address(ip, port);
+    struct sockaddr_in address = helper_generate_address(ip, port);
 
     // Try to bind the socket to the address generated
     int bind_result =
@@ -86,7 +87,7 @@ int server_listen(int server) {
                    client_ip[1], client_ip[2], client_ip[3],
                    ntohs(client_address.sin_port));
 
-            handle_client(client);
+            server_handle_client(client);
 
             // Disconnect the client socket
             close(client);
@@ -114,11 +115,12 @@ void parse_request_line(http_request *request, char *line) {
     char *target = strtok(NULL, " ");
     char *version = strtok(NULL, " ");
 
-    request->method = string_to_method(method);
+    http_request_parse_method(method, &request->method);
     request->target = target;
-    request->version = atof(version + 5);
+    request->version = (http_version){atoi(version + 5), atoi(version + 7)};
 
-    printf("%s - %f\n", version, request->version);
+    printf("Method: %d, Target: %s, Version: %d.%d\n", request->method,
+           request->target, request->version.minor, request->version.major);
 }
 
 void parse_field_line(http_request *request, char *line) {
@@ -137,9 +139,11 @@ void parse_field_line(http_request *request, char *line) {
     value += strspn(value, " \t");
 
     http_request_add_field(request, (http_field){name, value});
+
+    printf("Name: %s, Value: %s\n", name, value);
 }
 
-void handle_client(int client) {
+void server_handle_client(int client) {
     char *request_content = NULL;
     char request_buffer[1024];
 
@@ -158,8 +162,6 @@ void handle_client(int client) {
 
     http_request request;
     http_request_init(&request);
-
-    printf("%s\n", request_content);
 
     char *line = request_content;
     char *end;

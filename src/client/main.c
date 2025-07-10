@@ -47,7 +47,9 @@ int main() {
         printf("Connected\n");
     }
 
-    char request[] = "GET /index.html HTTP/1.1\r\n\r\n";
+    char request[] = "GET /index.html HTTP/1.1\r\nExample-Field: Foo, "
+                     "Bar\r\nField-Two: Baz\r\nContent-Type:      "
+                     "text/html\r\nFoo:    Bar\r\n\r\n";
 
     send(client, request, sizeof(request), 0);
 
