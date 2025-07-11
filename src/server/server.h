@@ -1,10 +1,12 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#include <stdbool.h>
+
 void server_handle_client(int client);
-int server_init(int *server);
-int server_bind(int server);
-int server_listen(int server);
-void server_close(int server);
+bool server_init(int *server);
+bool server_bind(int server);
+bool server_listen(int server);
+bool server_close(int server);
 
 #endif
