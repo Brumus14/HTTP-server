@@ -13,6 +13,8 @@
 #include "helper.h"
 #include "request.h"
 
+void server_handle_client(int client);
+
 bool server_init(int *server) {
     // Create the TCP network socket
     *server = socket(PF_INET, SOCK_STREAM, 0);
@@ -191,6 +193,10 @@ void parse_field_line(http_request *request, char *line) {
     printf("Name: %s, Value: %s\n", name, value);
 }
 
+char *generate_response(http_request request) {
+    return NULL;
+}
+
 void server_handle_client(int client) {
     char *request_content = NULL;
     char request_buffer[1024];
@@ -235,6 +241,8 @@ void server_handle_client(int client) {
             break;
         }
     }
+
+    char *response = generate_response(request);
 
     http_request_destroy(&request);
     free(request_content);
