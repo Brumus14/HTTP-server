@@ -56,7 +56,7 @@ bool server_bind(int server) {
         return false;
     }
 
-    printf("Socket is bound to %d.%d.%d.%d on port %d\n", ip[0], ip[1], ip[2],
+    printf("Server is bound to %d.%d.%d.%d on port %d\n", ip[0], ip[1], ip[2],
            ip[3], port);
 
     return true;
@@ -73,7 +73,7 @@ bool server_listen(int server) {
     struct sockaddr_in client_address;
     socklen_t client_length = sizeof(client_address);
 
-    printf("Listening for client connections\n");
+    printf("Server is listening for connections\n");
 
     while (true) {
         // Wait for a connection and accept it
@@ -166,8 +166,7 @@ void parse_request_line(http_request *request, char *line) {
     request->version.minor = atoi(version_number);
     request->version.major = atoi(version_number + 2);
 
-    printf("Method: %d, Target: %s, Version: %d.%d\n", request->method,
-           request->target, request->version.minor, request->version.major);
+    printf("%s request for %s\n", method, request->target);
 }
 
 void parse_field_line(http_request *request, char *line) {
@@ -189,12 +188,42 @@ void parse_field_line(http_request *request, char *line) {
     line[line_end + 1] = '\0';
 
     http_request_add_field(request, (http_field){name, value});
-
-    printf("Name: %s, Value: %s\n", name, value);
 }
 
-char *generate_response(http_request request) {
-    return NULL;
+// TODO: Review type sizes here
+bool resolve_target(char *target, char **value) {
+    FILE *file = fopen(target + 1, "rb");
+
+    // Target file doesn't exist
+    if (file == NULL) {
+        return false;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    *value = malloc(sizeof(char) * file_size);
+    fread(*value, 1, file_size, file);
+
+    return true;
+}
+
+char *generate_response(http_request request, int *size) {
+    int status_code = 200;
+    char *body;
+
+    bool resolve_target_result = resolve_target(request.target, &body);
+    if (!resolve_target_result) {
+        fprintf(stderr, "generate_response: Failed to resolve target %s\n",
+                request.target);
+    }
+
+    *size = 14;
+    char *response = malloc(sizeof(char) * *size);
+    memcpy(response, "HTTP/1.1 404\r\n\r\n", *size);
+
+    return response;
 }
 
 void server_handle_client(int client) {
@@ -242,7 +271,9 @@ void server_handle_client(int client) {
         }
     }
 
-    char *response = generate_response(request);
+    int response_size;
+    char *response = generate_response(request, &response_size);
+    send(client, response, response_size, 0);
 
     http_request_destroy(&request);
     free(request_content);

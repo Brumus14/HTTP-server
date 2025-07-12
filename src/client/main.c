@@ -53,6 +53,11 @@ int main() {
 
     send(client, request, sizeof(request), 0);
 
+    char response[1024];
+    response[recv(client, response, sizeof(response), 0)] = '\0';
+
+    printf("%s\n", response);
+
     close(client);
 
     return 0;
