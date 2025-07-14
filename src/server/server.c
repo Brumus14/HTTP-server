@@ -12,8 +12,7 @@
 #include <stdint.h>
 #include "helper.h"
 #include "request.h"
-
-void server_handle_client(int client);
+#include "http.h"
 
 bool server_init(int *server) {
     // Create the TCP network socket
@@ -60,6 +59,59 @@ bool server_bind(int server) {
            ip[3], port);
 
     return true;
+}
+
+void server_handle_client(int client) {
+    char *request_content = NULL;
+    char request_buffer[1024];
+
+    int request_size = 0;
+
+    // TODO: Handle two requests that were both received at same time
+
+    // Receive a request from the client
+    do {
+        int received_size =
+            recv(client, request_buffer, sizeof(request_buffer), 0);
+
+        request_content =
+            realloc(request_content, request_size + received_size + 1);
+
+        memcpy(request_content + request_size, request_buffer, received_size);
+        request_size += received_size;
+        request_content[request_size] = '\0';
+    } while (strstr(request_content, "\r\n\r\n") == NULL);
+
+    http_request request;
+    http_request_init(&request);
+
+    // Parse the request line by line
+    char *line = request_content;
+    char *end;
+
+    while ((end = strstr(line, "\r\n")) != NULL) {
+        *end = '\0';
+
+        if (line == request_content) {
+            http_parse_request_line(&request, line);
+        } else {
+            http_parse_field_line(&request, line);
+        }
+
+        // Skip past \r\n to reach next line
+        line = end + 2;
+
+        if (*line == '\r') {
+            break;
+        }
+    }
+
+    int response_size;
+    char *response = http_generate_response(request, &response_size);
+    send(client, response, response_size, 0);
+
+    http_request_destroy(&request);
+    free(request_content);
 }
 
 // Currently multiple processes should switch to event-driven
@@ -145,136 +197,4 @@ bool server_close(int server) {
     }
 
     return true;
-}
-
-void parse_request_line(http_request *request, char *line) {
-    // Split up the request line into its segments
-    char *method = strtok(line, " ");
-    char *target = strtok(NULL, " ");
-    char *version = strtok(NULL, " ");
-
-    bool parse_method_result =
-        http_request_parse_method(method, &request->method);
-    if (!parse_method_result) {
-        fprintf(stderr, "parse_request_line: Failed to parse method\n");
-    }
-
-    // TODO: Maybe copy the string
-    request->target = target;
-    // Skip past the HTTP/ part of the version
-    char *version_number = version + 5;
-    request->version.minor = atoi(version_number);
-    request->version.major = atoi(version_number + 2);
-
-    printf("%s request for %s\n", method, request->target);
-}
-
-void parse_field_line(http_request *request, char *line) {
-    // Split the line into the name and value
-    char *name = line;
-    *strchr(line, ':') = '\0';
-
-    char *value = name + strlen(name) + 1;
-    // Skip past any whitespace between the name and value
-    value += strspn(value, " \t");
-
-    // Ignore any whitespace at the end of the line
-    int line_end = strlen(line) - 1;
-
-    while (line[line_end] == ' ' || line[line_end] == '\t') {
-        line_end--;
-    }
-
-    line[line_end + 1] = '\0';
-
-    http_request_add_field(request, (http_field){name, value});
-}
-
-// TODO: Review type sizes here
-bool resolve_target(char *target, char **value) {
-    FILE *file = fopen(target + 1, "rb");
-
-    // Target file doesn't exist
-    if (file == NULL) {
-        return false;
-    }
-
-    fseek(file, 0, SEEK_END);
-    long file_size = ftell(file);
-    rewind(file);
-
-    *value = malloc(sizeof(char) * file_size);
-    fread(*value, 1, file_size, file);
-
-    return true;
-}
-
-char *generate_response(http_request request, int *size) {
-    int status_code = 200;
-    char *body;
-
-    bool resolve_target_result = resolve_target(request.target, &body);
-    if (!resolve_target_result) {
-        fprintf(stderr, "generate_response: Failed to resolve target %s\n",
-                request.target);
-    }
-
-    *size = 14;
-    char *response = malloc(sizeof(char) * *size);
-    memcpy(response, "HTTP/1.1 404\r\n\r\n", *size);
-
-    return response;
-}
-
-void server_handle_client(int client) {
-    char *request_content = NULL;
-    char request_buffer[1024];
-
-    int request_size = 0;
-
-    // TODO: Handle two requests that were both recieved at same time
-
-    // Recieve a request from the client
-    do {
-        int recieved_size =
-            recv(client, request_buffer, sizeof(request_buffer), 0);
-
-        request_content =
-            realloc(request_content, request_size + recieved_size + 1);
-
-        memcpy(request_content + request_size, request_buffer, recieved_size);
-        request_size += recieved_size;
-        request_content[request_size] = '\0';
-    } while (strstr(request_content, "\r\n\r\n") == NULL);
-
-    http_request request;
-    http_request_init(&request);
-
-    // Parse the request line by line
-    char *line = request_content;
-    char *end;
-
-    while ((end = strstr(line, "\r\n")) != NULL) {
-        *end = '\0';
-
-        if (line == request_content) {
-            parse_request_line(&request, line);
-        } else {
-            parse_field_line(&request, line);
-        }
-
-        // Skip past \r\n to reach next line
-        line = end + 2;
-
-        if (*line == '\r') {
-            break;
-        }
-    }
-
-    int response_size;
-    char *response = generate_response(request, &response_size);
-    send(client, response, response_size, 0);
-
-    http_request_destroy(&request);
-    free(request_content);
 }
