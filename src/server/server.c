@@ -12,7 +12,7 @@
 #include <stdint.h>
 #include "helper.h"
 #include "request.h"
-#include "http.h"
+#include "response.h"
 
 bool server_init(int *server) {
     // Create the TCP network socket
@@ -84,31 +84,11 @@ void server_handle_client(int client) {
 
     http_request request;
     http_request_init(&request);
-
-    // Parse the request line by line
-    char *line = request_content;
-    char *end;
-
-    while ((end = strstr(line, "\r\n")) != NULL) {
-        *end = '\0';
-
-        if (line == request_content) {
-            http_parse_request_line(&request, line);
-        } else {
-            http_parse_field_line(&request, line);
-        }
-
-        // Skip past \r\n to reach next line
-        line = end + 2;
-
-        if (*line == '\r') {
-            break;
-        }
-    }
+    http_request_parse(&request, request_content);
 
     int response_size;
-    char *response = http_generate_response(request, &response_size);
-    send(client, response, response_size, 0);
+    http_response response = http_response_generate(request);
+    // send(client, response, response_size, 0);
 
     http_request_destroy(&request);
     free(request_content);
