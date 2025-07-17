@@ -8,13 +8,13 @@ typedef struct {
     http_version version;
     char *target;
     http_method method;
-    int field_count;
-    http_field *fields;
+    int header_count;
+    http_field *headers;
 } http_request;
 
 void http_request_init(http_request *request);
 void http_request_destroy(http_request *request);
-void http_request_add_field(http_request *request, http_field field);
+void http_request_add_header(http_request *request, http_field header);
 void http_request_parse(http_request *request, char *string);
 
 #endif

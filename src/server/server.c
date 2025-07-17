@@ -91,8 +91,15 @@ void server_handle_client(int client) {
     unsigned int response_size;
     char *response_string = http_response_to_string(&response, &response_size);
 
-    send(client, response_string, response_size, 0);
+    unsigned int bytes_sent = 0;
 
+    do {
+        bytes_sent += send(client, response_string + bytes_sent,
+                           response_size - bytes_sent, 0);
+    } while (bytes_sent < response_size);
+
+    free(response_string);
+    http_response_destroy(&response);
     http_request_destroy(&request);
     free(request_content);
 }

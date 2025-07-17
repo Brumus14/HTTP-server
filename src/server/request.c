@@ -17,21 +17,21 @@ static const method_map_pair method_map[] = {
 };
 
 void http_request_init(http_request *request) {
-    request->field_count = 0;
-    request->fields = NULL;
+    request->header_count = 0;
+    request->headers = NULL;
 }
 
 void http_request_destroy(http_request *request) {
-    free(request->fields);
+    free(request->headers);
 }
 
-// TODO: Maybe add merging fields if the request has multiple fields with same
+// TODO: Maybe add merging headers if the request has multiple headers with same
 // name
-void http_request_add_field(http_request *request, http_field field) {
-    request->field_count++;
-    request->fields =
-        realloc(request->fields, sizeof(http_field) * request->field_count);
-    request->fields[request->field_count - 1] = field;
+void http_request_add_header(http_request *request, http_field header) {
+    request->header_count++;
+    request->headers =
+        realloc(request->headers, sizeof(http_field) * request->header_count);
+    request->headers[request->header_count - 1] = header;
 }
 
 bool parse_method(const char *string, http_method *method) {
@@ -69,7 +69,7 @@ void parse_request_line(http_request *request, char *line) {
     printf("%s request for %s\n", method, request->target);
 }
 
-void parse_field_line(http_request *request, char *line) {
+void parse_header_line(http_request *request, char *line) {
     // Split the line into the name and value
     char *name = line;
     *strchr(line, ':') = '\0';
@@ -87,7 +87,7 @@ void parse_field_line(http_request *request, char *line) {
 
     line[line_end + 1] = '\0';
 
-    http_request_add_field(request, (http_field){name, value});
+    http_request_add_header(request, (http_field){name, value});
 }
 
 void http_request_parse(http_request *request, char *string) {
@@ -101,7 +101,7 @@ void http_request_parse(http_request *request, char *string) {
         if (line == string) {
             parse_request_line(request, line);
         } else {
-            parse_field_line(request, line);
+            parse_header_line(request, line);
         }
 
         // Skip past \r\n to reach next line

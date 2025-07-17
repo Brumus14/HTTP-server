@@ -13,6 +13,8 @@ bool target_get_content(const char *target, char **content,
 
     // Target file doesn't exist
     if (file == NULL) {
+        *content_size = 0;
+        *content = NULL;
         return false;
     }
 
@@ -22,6 +24,8 @@ bool target_get_content(const char *target, char **content,
 
     *content = malloc(sizeof(char) * *content_size);
     fread(*content, 1, *content_size, file);
+
+    fclose(file);
 
     return true;
 }
