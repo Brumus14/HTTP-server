@@ -4,8 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define TARGET_TYPE_DEFAULT "application/octet-stream"
+
 // TODO: Review type sizes here
-bool target_get_content(const char *target, char **content, int *content_size) {
+bool target_get_content(const char *target, char **content,
+                        unsigned int *content_size) {
     FILE *file = fopen(target + 1, "rb");
 
     // Target file doesn't exist
@@ -58,15 +61,30 @@ static const type_map_pair type_map[] = {
     {"xml", "application/xml"},
 };
 
-bool target_extension_to_type(const char *extension, const char **type) {
+const char *target_get_type(const char *target) {
     static const int type_map_size = sizeof(type_map) / sizeof(type_map[0]);
 
-    for (int i = 0; i < type_map_size; i++) {
-        if (strcmp(extension, type_map[i].extension) == 0) {
-            *type = type_map[i].type;
-            return true;
+    bool has_extension = false;
+    const char *extension;
+
+    // Get the target extension if possible
+    for (int i = strlen(target) - 2; i > 0; i--) {
+        if (target[i] == '.') {
+            has_extension = true;
+            extension = &target[i + 1];
+            break;
         }
     }
 
-    return false;
+    // If no extension return the default type
+    if (!has_extension) {
+        return TARGET_TYPE_DEFAULT;
+    }
+
+    // Convert the target extension to its type
+    for (int i = 0; i < type_map_size; i++) {
+        if (strcmp(extension, type_map[i].extension) == 0) {
+            return type_map[i].type;
+        }
+    }
 }

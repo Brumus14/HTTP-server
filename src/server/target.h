@@ -3,7 +3,8 @@
 
 #include <stdbool.h>
 
-bool target_get_content(const char *target, char **content, int *content_size);
-bool target_extension_to_type(const char *extension, const char **type);
+bool target_get_content(const char *target, char **content,
+                        unsigned int *content_size);
+const char *target_get_type(const char *target);
 
 #endif

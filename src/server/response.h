@@ -7,18 +7,18 @@
 
 typedef struct {
     http_version version;
-    int status_code;
-    int field_count;
+    unsigned int status_code;
+    unsigned int field_count;
     http_field *fields;
-    int content_size;
+    unsigned int content_size;
     char *content;
 } http_response;
 
 void http_response_init(http_response *response);
 void http_response_destroy(http_response *response);
 void http_response_add_field(http_response *response, http_field field);
-void http_response_add_content(http_response *response, char *target);
-
-http_response http_response_generate(http_request request);
+http_response http_response_generate(const http_request *request);
+char *http_response_to_string(const http_response *response,
+                              unsigned int *response_size);
 
 #endif

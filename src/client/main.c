@@ -36,8 +36,8 @@ int main() {
     if (connect_result == -1) {
         // Generate an error message with the IP and port
         char message[42 + 1];
-        sprintf(message, "Failed to connect to %d.%d.%d.%d:%d", ip[0], ip[1],
-                ip[2], ip[3], port);
+        sprintf(message, "Failed to connect to %u.%u.%u.%u on port %u", ip[0],
+                ip[1], ip[2], ip[3], port);
 
         // Output the error from the connect attempt with the generated message
         perror(message);

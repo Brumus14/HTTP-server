@@ -18,8 +18,8 @@ typedef struct {
 } http_version;
 
 typedef struct {
-    char *name;
-    char *value;
+    const char *name;
+    const char *value;
 } http_field;
 
 #endif

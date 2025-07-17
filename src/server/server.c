@@ -49,13 +49,13 @@ bool server_bind(int server) {
 
     if (bind_result == -1) {
         fprintf(stderr,
-                "server_bind: Failed to bind to %d.%d.%d.%d on port %d: ",
+                "server_bind: Failed to bind to %u.%u.%u.%u on port %u: ",
                 ip[0], ip[1], ip[2], ip[3], port);
         perror("");
         return false;
     }
 
-    printf("Server is bound to %d.%d.%d.%d on port %d\n", ip[0], ip[1], ip[2],
+    printf("Server is bound to %u.%u.%u.%u on port %u\n", ip[0], ip[1], ip[2],
            ip[3], port);
 
     return true;
@@ -86,9 +86,12 @@ void server_handle_client(int client) {
     http_request_init(&request);
     http_request_parse(&request, request_content);
 
-    int response_size;
-    http_response response = http_response_generate(request);
-    // send(client, response, response_size, 0);
+    http_response response = http_response_generate(&request);
+
+    unsigned int response_size;
+    char *response_string = http_response_to_string(&response, &response_size);
+
+    send(client, response_string, response_size, 0);
 
     http_request_destroy(&request);
     free(request_content);
@@ -126,7 +129,7 @@ bool server_listen(int server) {
 
         uint16_t client_port = ntohs(client_address.sin_port);
 
-        printf("Connected to client %d.%d.%d.%d on port %d\n", client_ip[0],
+        printf("Connected to client %u.%u.%u.%u on port %u\n", client_ip[0],
                client_ip[1], client_ip[2], client_ip[3], client_port);
 
         // Fork to another process to handle the client on
@@ -147,7 +150,7 @@ bool server_listen(int server) {
                 perror("server_listen: Failed to close client on child");
             }
 
-            printf("Disconnected from client %d.%d.%d.%d on port %d\n",
+            printf("Disconnected from client %u.%u.%u.%u on port %u\n",
                    client_ip[0], client_ip[1], client_ip[2], client_ip[3],
                    client_port);
 

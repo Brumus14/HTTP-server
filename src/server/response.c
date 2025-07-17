@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "helper.h"
+#include "http.h"
 #include "target.h"
 
 void http_response_init(http_response *response) {
@@ -22,68 +23,66 @@ void http_response_add_field(http_response *response, http_field field) {
     response->fields[response->field_count - 1] = field;
 }
 
-void http_response_add_content(http_response *response, char *target) {
-    bool target_get_content_result =
-        target_get_content(target, &response->content, &response->content_size);
+// TODO: implement status codes properly
+http_response http_response_generate(const http_request *request) {
+    http_response response;
+    http_response_init(&response);
+
+    response.version = (http_version){1, 1};
+    response.status_code = 200;
+
+    const char *target_type = target_get_type(request->target);
+    http_response_add_field(&response,
+                            (http_field){"Content-Type", target_type});
+
+    // TODO: set the content to 404 default if target not found
+    bool target_get_content_result = target_get_content(
+        request->target, &response.content, &response.content_size);
     if (!target_get_content_result) {
-        fprintf(stderr,
-                "http_response_add_content: Failed to resolve target %s\n",
-                target);
+        response.status_code = 404;
+        fprintf(stderr, "http_response_generate: Failed to resolve target %s\n",
+                request->target);
     }
+
+    // TODO: check for memory leaks that definitely exist
+    // TODO: check when strings are being freed
+
+    char *content_size =
+        malloc(sizeof(char) * (helper_digit_count(response.content_size) + 1));
+    sprintf(content_size, "%u", response.content_size);
+
+    http_response_add_field(&response,
+                            (http_field){"Content-Length", content_size});
+
+    return response;
 }
 
-http_response http_response_generate(http_request request) {
-    unsigned int status_code = 200;
+char *http_response_to_string(const http_response *response,
+                              unsigned int *response_size) {
+    *response_size = 0;
+    unsigned int response_position = 0;
+    char *response_string = NULL;
 
-    bool has_extension = false;
-    char *target_extension;
+    // The status line
+    *response_size += 14;
+    response_string = realloc(response_string, *response_size);
+    sprintf(response_string, "HTTP/%u.%u %03u\r\n", response->version.minor,
+            response->version.major, response->status_code);
 
-    for (int i = strlen(request.target) - 2; i > 0; i--) {
-        if (request.target[i] == '.') {
-            has_extension = true;
-            target_extension = &request.target[i + 1];
-            break;
-        }
+    for (int i = 0; i < response->field_count; i++) {
+        response_position = *response_size;
+        *response_size += strlen(response->fields[i].name) + 2 +
+                          strlen(response->fields[i].value) + 2;
+        response_string = realloc(response_string, *response_size);
+        sprintf(response_string + response_position, "%s: %s\r\n",
+                response->fields[i].name, response->fields[i].value);
     }
 
-    // TODO: what should the default type be
-    // TODO: set correct status codes
-    const char *target_type = "application/octet-stream";
+    response_position = *response_size;
+    *response_size += 2 + response->content_size;
+    response_string = realloc(response_string, *response_size);
+    sprintf(response_string + response_position, "\r\n%.*s",
+            response->content_size, response->content);
 
-    if (has_extension) {
-        bool extension_to_type_result =
-            target_extension_to_type(target_extension, &target_type);
-
-        if (extension_to_type_result) {
-            printf("Target content type is: %s\n", target_type);
-        } else {
-            printf("Couldn't resolve target type using default\n");
-        }
-    }
-
-    char content_type[14 + strlen(target_type) + 1];
-    sprintf(content_type, "Content-Type: %s", target_type);
-
-    char *target_content;
-    int target_size;
-
-    char content_length[16 + helper_digit_count(target_size) + 1];
-    sprintf(content_length, "Content-Length: %d", target_size);
-
-    char status_line[12 + 1];
-    sprintf(status_line, "HTTP/1.1 %03d", status_code);
-
-    printf("%s\n%s\n%s\n%s\n", status_line, content_type, content_length,
-           target_content);
-
-    char *response = malloc(sizeof(char) * 1);
-
-    // *size = 13;
-    // char *response = malloc(sizeof(char) * *size);
-    // memcpy(response,
-    //        "HTTP/1.1 200\r\nContent-Type: text/plain\r\nContent-Length: "
-    //        "13\r\n\r\nHello, world!",
-    //        *size);
-    //
-    return (http_response){};
+    return response_string;
 }
