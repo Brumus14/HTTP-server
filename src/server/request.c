@@ -59,7 +59,6 @@ void parse_request_line(http_request *request, char *line) {
         fprintf(stderr, "parse_request_line: Failed to parse method\n");
     }
 
-    // TODO: Maybe copy the string
     request->target = target;
     // Skip past the HTTP/ part of the version
     char *version_number = version + 5;

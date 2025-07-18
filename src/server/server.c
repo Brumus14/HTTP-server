@@ -82,6 +82,8 @@ void server_handle_client(int client) {
         request_content[request_size] = '\0';
     } while (strstr(request_content, "\r\n\r\n") == NULL);
 
+    // TODO: split into 2 functions maybe? one for request processing one for
+    // getting request
     http_request request;
     http_request_init(&request);
     http_request_parse(&request, request_content);

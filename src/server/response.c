@@ -7,6 +7,8 @@
 #include "http.h"
 #include "target.h"
 
+#define STATUS_LINE_LENGTH 14
+
 void http_response_init(http_response *response) {
     response->field_count = 0;
     response->fields = NULL;
@@ -40,11 +42,9 @@ http_response http_response_generate(const http_request *request) {
     response.version = (http_version){1, 1};
     response.status_code = 200;
 
-    // TODO: set the content to 404 default if target not found
     bool target_get_content_result = target_get_content(
         request->target, &response.content, &response.content_size);
 
-    // TODO: check for memory leaks that definitely exist
     // TODO: check when strings are being freed
 
     if (!target_get_content_result) {
@@ -86,14 +86,13 @@ char *http_response_to_string(const http_response *response,
     char *response_string = NULL;
 
     // The status line
-    // TODO: remove magic numbers
-    *response_size += 14;
+    *response_size += STATUS_LINE_LENGTH;
     response_string = realloc(response_string, *response_size);
 
-    char status_line[14 + 1];
+    char status_line[STATUS_LINE_LENGTH + 1];
     sprintf(status_line, "HTTP/%u.%u %03u\r\n", response->version.minor,
             response->version.major, response->status_code);
-    memcpy(response_string, status_line, sizeof(char) * 14);
+    memcpy(response_string, status_line, sizeof(char) * STATUS_LINE_LENGTH);
 
     for (int i = 0; i < response->field_count; i++) {
         response_position = *response_size;
