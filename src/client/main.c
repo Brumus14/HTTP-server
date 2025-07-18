@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -47,15 +48,13 @@ int main() {
         printf("Connected\n");
     }
 
-    char request[] = "GET /index.html HTTP/1.1\r\nExample-Field: Foo, "
-                     "Bar\r\nField-Two: Baz\r\nContent-Type:      "
-                     "text/html\r\nFoo:    Bar\r\n\r\n";
+    char request[] = "GET /lbark/index.html HTTP/1.1\r\n\r\nGET "
+                     "/lbark/blog.html HTTP/1.1\r\n\r\n";
 
-    send(client, request, sizeof(request), 0);
+    send(client, request, strlen(request), 0);
 
-    char response[1024];
+    char response[4096];
     response[recv(client, response, sizeof(response), 0)] = '\0';
-
     printf("%s\n", response);
 
     close(client);

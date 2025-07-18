@@ -48,7 +48,8 @@ bool parse_method(const char *string, http_method *method) {
     return false;
 }
 
-void parse_request_line(http_request *request, char *line) {
+void parse_request_line(http_request *request, char *line, uint8_t ip[4],
+                        uint16_t port) {
     // Split up the request line into its segments
     char *method = strtok(line, " ");
     char *target = strtok(NULL, " ");
@@ -65,7 +66,8 @@ void parse_request_line(http_request *request, char *line) {
     request->version.minor = atoi(version_number);
     request->version.major = atoi(version_number + 2);
 
-    printf("%s request for %s\n", method, request->target);
+    printf("%s request for %s from %u.%u.%u.%u port %u\n", method,
+           request->target, ip[0], ip[1], ip[2], ip[3], port);
 }
 
 void parse_header_line(http_request *request, char *line) {
@@ -89,25 +91,30 @@ void parse_header_line(http_request *request, char *line) {
     http_request_add_header(request, (http_field){name, value});
 }
 
-void http_request_parse(http_request *request, char *string) {
+void http_request_parse(http_request *request, char *string,
+                        unsigned int string_length, uint8_t ip[4],
+                        uint16_t port) {
     // Parse the request line by line
     char *line = string;
     char *end;
 
-    while ((end = strstr(line, "\r\n")) != NULL) {
-        *end = '\0';
+    for (int i = 0; i < string_length - 1; i++) {
+        if (string[i] == '\r' && string[i + 1] == '\n') {
+            end = string + i;
+            *end = '\0';
 
-        if (line == string) {
-            parse_request_line(request, line);
-        } else {
-            parse_header_line(request, line);
-        }
+            if (line == string) {
+                parse_request_line(request, line, ip, port);
+            } else {
+                parse_header_line(request, line);
+            }
 
-        // Skip past \r\n to reach next line
-        line = end + 2;
+            // Skip past \r\n to reach next line
+            line = end + 2;
 
-        if (*line == '\r') {
-            break;
+            if (*line == '\r') {
+                break;
+            }
         }
     }
 }
