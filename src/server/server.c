@@ -65,13 +65,16 @@ void handle_request(http_client client, char *request_string,
                     unsigned int request_string_length) {
     http_request request;
     http_request_init(&request);
-    http_request_parse(&request, request_string, request_string_length, client);
+    bool request_parse_result = http_request_parse(
+        &request, request_string, request_string_length, client);
 
-    http_response response = http_response_generate(&request);
+    http_response response =
+        http_response_generate(&request, request_parse_result, client);
 
     unsigned int response_size;
     char *response_string = http_response_to_string(&response, &response_size);
 
+    // Send the whole response to the client
     unsigned int bytes_sent = 0;
 
     do {
@@ -79,9 +82,15 @@ void handle_request(http_client client, char *request_string,
                            response_size - bytes_sent, 0);
     } while (bytes_sent < response_size);
 
-    printf("Responded to %s request for %s from %u.%u.%u.%u port %u\n",
-           http_method_to_string(request.method), request.target, client.ip[0],
-           client.ip[1], client.ip[2], client.ip[3], client.port);
+    if (request_parse_result) {
+        printf("Responded to %s request for %s from %u.%u.%u.%u port %u\n",
+               http_method_to_string(request.method), request.target,
+               client.ip[0], client.ip[1], client.ip[2], client.ip[3],
+               client.port);
+    } else {
+        printf("Responded to %u.%u.%u.%u port %u\n", client.ip[0], client.ip[1],
+               client.ip[2], client.ip[3], client.port);
+    }
 
     free(response_string);
     http_response_destroy(&response);
@@ -96,18 +105,18 @@ void handle_client(http_client client) {
 
     bool overflow_data = false;
 
-    // TODO: Handle two requests that were both received at same time
-
     // Receive a request from the client
     while (true) {
         if (!overflow_data) {
             int received_size = recv(client.descriptor, received_data_buffer,
                                      sizeof(received_data_buffer), 0);
 
+            // Client closed connection
             if (received_size == 0) {
                 break;
             }
 
+            // Append the received data to the total data buffer
             received_data =
                 realloc(received_data, total_recieved_size + received_size + 1);
 
@@ -115,20 +124,26 @@ void handle_client(http_client client) {
                    received_size);
             total_recieved_size += received_size;
             received_data[total_recieved_size] = '\0';
+
+            overflow_data = false;
         }
 
         char *request_end = strstr(received_data, "\r\n\r\n");
 
+        // The headers have been fully received
         if (request_end != NULL) {
             unsigned int request_size = (request_end - received_data + 4);
             handle_request(client, received_data, request_size);
 
+            // If also received part of another request
             if (request_size < total_recieved_size) {
+                // Move the partial request to the front of the buffer
                 memmove(received_data, received_data + request_size,
                         request_size);
                 overflow_data = true;
             }
 
+            // Resize the data buffer
             received_data =
                 realloc(received_data, total_recieved_size - request_size);
             total_recieved_size -= request_size;

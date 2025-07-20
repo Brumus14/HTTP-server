@@ -9,14 +9,16 @@ typedef struct {
     http_version version;
     char *target;
     http_method method;
-    int header_count;
+    unsigned int header_count;
     http_field *headers;
+    unsigned int body_size;
+    char *body;
 } http_request;
 
 void http_request_init(http_request *request);
 void http_request_destroy(http_request *request);
 void http_request_add_header(http_request *request, http_field header);
-void http_request_parse(http_request *request, char *string,
+bool http_request_parse(http_request *request, char *string,
                         unsigned int string_length, http_client client);
 
 #endif

@@ -1,11 +1,8 @@
 headers:
     Connection
-    Date
 
 return 404 page
 handle all status codes
-implement POST, PUT, HEAD requests
-improve logging
 maybe case insensitive headers
 chunked transfer
 
@@ -16,3 +13,6 @@ maybe DoS protection
 connection limit
 polling instead of forking
 sendfile instead of reading file etc
+
+dynamic configuration so that can properly handle POST request etc, would act like a website backend
+could implement lua scripting for the config

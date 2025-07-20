@@ -1,7 +1,4 @@
-all: server client
+all: server
 
 server: src/server/main.c src/server/server.c src/server/request.c src/server/helper.c src/server/target.c src/server/response.c src/server/http.c
-	@gcc src/server/main.c src/server/server.c src/server/request.c src/server/helper.c src/server/target.c src/server/response.c src/server/http.c -o server
-
-client: src/client/main.c
-	@gcc src/client/main.c -o client
+	gcc src/server/main.c src/server/server.c src/server/request.c src/server/helper.c src/server/target.c src/server/response.c src/server/http.c -Wall -o server

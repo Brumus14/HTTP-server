@@ -8,7 +8,8 @@
 #define TARGET_TYPE_DEFAULT "application/octet-stream"
 
 bool target_exists(const char *target) {
-    int exists = access(target, F_OK);
+    // Access the target relative to current directory
+    int exists = access(target + 1, F_OK);
 
     if (exists == 0) {
         return true;
@@ -18,6 +19,7 @@ bool target_exists(const char *target) {
 }
 
 unsigned int target_get_size(const char *target) {
+    // Open the target relative to current directory
     FILE *file = fopen(target + 1, "rb");
 
     // Target file doesn't exist
@@ -107,15 +109,14 @@ const char *target_get_type(const char *target) {
         }
     }
 
-    // If no extension return the default type
-    if (!has_extension) {
-        return TARGET_TYPE_DEFAULT;
-    }
-
     // Convert the target extension to its type
-    for (int i = 0; i < type_map_size; i++) {
-        if (strcmp(extension, type_map[i].extension) == 0) {
-            return type_map[i].type;
+    if (has_extension) {
+        for (int i = 0; i < type_map_size; i++) {
+            if (strcmp(extension, type_map[i].extension) == 0) {
+                return type_map[i].type;
+            }
         }
     }
+
+    return TARGET_TYPE_DEFAULT;
 }
