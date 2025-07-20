@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include "helper.h"
+#include "http.h"
 #include "request.h"
 #include "response.h"
 
@@ -59,13 +60,12 @@ bool server_bind(int server) {
     return true;
 }
 
-void handle_request(int client, char *request_string,
-                    unsigned int request_string_length, uint8_t ip[4],
-                    uint16_t port) {
+// TODO: use more pointers to structs
+void handle_request(http_client client, char *request_string,
+                    unsigned int request_string_length) {
     http_request request;
     http_request_init(&request);
-    http_request_parse(&request, request_string, request_string_length, ip,
-                       port);
+    http_request_parse(&request, request_string, request_string_length, client);
 
     http_response response = http_response_generate(&request);
 
@@ -75,19 +75,20 @@ void handle_request(int client, char *request_string,
     unsigned int bytes_sent = 0;
 
     do {
-        bytes_sent += send(client, response_string + bytes_sent,
+        bytes_sent += send(client.descriptor, response_string + bytes_sent,
                            response_size - bytes_sent, 0);
     } while (bytes_sent < response_size);
 
-    printf("Responded to %u.%u.%u.%u port %u\n", ip[0], ip[1], ip[2], ip[3],
-           port);
+    printf("Responded to %s request for %s from %u.%u.%u.%u port %u\n",
+           http_method_to_string(request.method), request.target, client.ip[0],
+           client.ip[1], client.ip[2], client.ip[3], client.port);
 
     free(response_string);
     http_response_destroy(&response);
     http_request_destroy(&request);
 }
 
-void handle_client(int client, uint8_t ip[4], uint16_t port) {
+void handle_client(http_client client) {
     char *received_data = NULL;
     char received_data_buffer[1024];
 
@@ -100,7 +101,7 @@ void handle_client(int client, uint8_t ip[4], uint16_t port) {
     // Receive a request from the client
     while (true) {
         if (!overflow_data) {
-            int received_size = recv(client, received_data_buffer,
+            int received_size = recv(client.descriptor, received_data_buffer,
                                      sizeof(received_data_buffer), 0);
 
             if (received_size == 0) {
@@ -120,13 +121,12 @@ void handle_client(int client, uint8_t ip[4], uint16_t port) {
 
         if (request_end != NULL) {
             unsigned int request_size = (request_end - received_data + 4);
-            handle_request(client, received_data, request_size, ip, port);
+            handle_request(client, received_data, request_size);
 
             if (request_size < total_recieved_size) {
                 memmove(received_data, received_data + request_size,
                         request_size);
                 overflow_data = true;
-                printf("merged requests!!!!!!!!!!!\n\n\n");
             }
 
             received_data =
@@ -154,27 +154,32 @@ bool server_listen(int server) {
 
     // Accept connections
     while (true) {
+        http_client client;
+
         // Wait for a connection and accept it
-        int client =
+        client.descriptor =
             accept(server, (struct sockaddr *)&client_address, &client_length);
 
-        if (client == -1) {
+        if (client.descriptor == -1) {
             perror("server_listen: Failed to accept connection");
             continue;
         }
 
         // Split the combined ip number into a byte array
-        uint8_t client_ip[4] = {
-            (ntohl(client_address.sin_addr.s_addr) & 0xff000000) >> 24,
-            (ntohl(client_address.sin_addr.s_addr) & 0x00ff0000) >> 16,
-            (ntohl(client_address.sin_addr.s_addr) & 0x0000ff00) >> 8,
-            ntohl(client_address.sin_addr.s_addr) & 0x000000ff,
-        };
+        memcpy(client.ip,
+               (uint8_t[4]){
+                   (ntohl(client_address.sin_addr.s_addr) & 0xff000000) >> 24,
+                   (ntohl(client_address.sin_addr.s_addr) & 0x00ff0000) >> 16,
+                   (ntohl(client_address.sin_addr.s_addr) & 0x0000ff00) >> 8,
+                   ntohl(client_address.sin_addr.s_addr) & 0x000000ff,
+               },
+               sizeof(uint8_t) * 4);
 
-        uint16_t client_port = ntohs(client_address.sin_port);
+        client.port = ntohs(client_address.sin_port);
+        client.connected = true;
 
-        printf("Connected to client %u.%u.%u.%u on port %u\n", client_ip[0],
-               client_ip[1], client_ip[2], client_ip[3], client_port);
+        printf("Connected to client %u.%u.%u.%u on port %u\n", client.ip[0],
+               client.ip[1], client.ip[2], client.ip[3], client.port);
 
         // Fork another process to handle the client on
         pid_t pid = fork();
@@ -187,23 +192,23 @@ bool server_listen(int server) {
                 perror("server_listen: Failed to close server on child");
             }
 
-            handle_client(client, client_ip, client_port);
+            handle_client(client);
 
-            close_result = close(client);
+            close_result = close(client.descriptor);
             if (close_result == -1) {
                 perror("server_listen: Failed to close client on child");
             }
 
             printf("Closed connection to client at %u.%u.%u.%u on port %u\n",
-                   client_ip[0], client_ip[1], client_ip[2], client_ip[3],
-                   client_port);
+                   client.ip[0], client.ip[1], client.ip[2], client.ip[3],
+                   client.port);
 
             // Kill the child process
             exit(EXIT_SUCCESS);
         } else if (pid > 0) {
             // Parent process for server
             // The client socket isn't needed for the parent process
-            int close_result = close(client);
+            int close_result = close(client.descriptor);
             if (close_result == -1) {
                 perror("server_listen: Failed to close client on parent");
             }

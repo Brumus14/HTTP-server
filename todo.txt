@@ -1,0 +1,18 @@
+headers:
+    Connection
+    Date
+
+return 404 page
+handle all status codes
+implement POST, PUT, HEAD requests
+improve logging
+maybe case insensitive headers
+chunked transfer
+
+sanitize request:
+    file path abuse
+
+maybe DoS protection
+connection limit
+polling instead of forking
+sendfile instead of reading file etc

@@ -3,8 +3,35 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #define TARGET_TYPE_DEFAULT "application/octet-stream"
+
+bool target_exists(const char *target) {
+    int exists = access(target, F_OK);
+
+    if (exists == 0) {
+        return true;
+    }
+
+    return false;
+}
+
+unsigned int target_get_size(const char *target) {
+    FILE *file = fopen(target + 1, "rb");
+
+    // Target file doesn't exist
+    if (file == NULL) {
+        return 0;
+    }
+
+    fseek(file, 0, SEEK_END);
+    unsigned int file_size = ftell(file);
+
+    fclose(file);
+
+    return file_size;
+}
 
 // TODO: Review type sizes here
 bool target_get_content(const char *target, char **content,

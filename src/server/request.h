@@ -17,7 +17,6 @@ void http_request_init(http_request *request);
 void http_request_destroy(http_request *request);
 void http_request_add_header(http_request *request, http_field header);
 void http_request_parse(http_request *request, char *string,
-                        unsigned int string_length, uint8_t ip[4],
-                        uint16_t port);
+                        unsigned int string_length, http_client client);
 
 #endif
