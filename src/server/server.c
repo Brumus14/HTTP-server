@@ -10,8 +10,11 @@
 #include "http.h"
 #include "request.h"
 #include "response.h"
+#include "target.h"
 
-bool server_init(int *server) {
+bool server_init(int *server, char *directory) {
+    target_set_directory(directory);
+
     // Create the TCP network socket
     *server = socket(PF_INET, SOCK_STREAM, 0);
 

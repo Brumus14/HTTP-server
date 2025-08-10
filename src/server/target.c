@@ -7,9 +7,27 @@
 
 #define TARGET_TYPE_DEFAULT "application/octet-stream"
 
+const char *directory;
+unsigned long directory_length;
+
+char *target_get_path(const char *target) {
+    char *path = malloc((directory_length + strlen(target)) * sizeof(char));
+    strcpy(path, directory);
+    strcpy(path + directory_length, target);
+
+    return path;
+}
+
+void target_set_directory(char *new_directory) {
+    directory = new_directory;
+    directory_length = strlen(directory);
+}
+
 bool target_exists(const char *target) {
     // Access the target relative to current directory
-    int exists = access(target + 1, F_OK);
+    char *target_path = target_get_path(target);
+    int exists = access(target_path, F_OK);
+    free(target_path);
 
     if (exists == 0) {
         return true;
@@ -20,7 +38,9 @@ bool target_exists(const char *target) {
 
 unsigned int target_get_size(const char *target) {
     // Open the target relative to current directory
-    FILE *file = fopen(target + 1, "rb");
+    char *target_path = target_get_path(target);
+    FILE *file = fopen(target_path, "rb");
+    free(target_path);
 
     // Target file doesn't exist
     if (file == NULL) {
@@ -38,7 +58,9 @@ unsigned int target_get_size(const char *target) {
 // TODO: Review type sizes here
 bool target_get_content(const char *target, char **content,
                         unsigned int *content_size) {
-    FILE *file = fopen(target + 1, "rb");
+    char *target_path = target_get_path(target);
+    FILE *file = fopen(target_path, "rb");
+    free(target_path);
 
     // Target file doesn't exist
     if (file == NULL) {

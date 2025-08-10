@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 
+void target_set_directory(char *new_directory);
 bool target_exists(const char *target);
 unsigned int target_get_size(const char *target);
 bool target_get_content(const char *target, char **content,

@@ -2,10 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main() {
+int main(int argc, char **argv) {
     int server;
 
-    bool init_result = server_init(&server);
+    bool init_result = server_init(&server, (argc > 1) ? argv[1] : ".");
     if (!init_result) {
         fprintf(stderr, "main: Failed to initialise server\n");
         return EXIT_FAILURE;
