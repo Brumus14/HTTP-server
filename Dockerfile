@@ -1,7 +1,7 @@
 FROM alpine:3.22 AS build
 RUN apk add --no-cache build-base git
 WORKDIR /server
-RUN git clone --branch v0.1 --depth 1 https://github.com/Brumus14/HTTP-server
+RUN git clone https://github.com/Brumus14/HTTP-server
 WORKDIR HTTP-server
 RUN make all
 
