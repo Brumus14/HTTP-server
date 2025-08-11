@@ -18,7 +18,7 @@ Download the Dockerfile and build it into a Docker image, then use the generated
 Once running the server will be hosted on 0.0.0.0 at the port you gave it.
 
 ## Note
-The server by default hosts the root target `/` with `/index.html` so by going to 0.0.0.0:8000 is essentially the same as 0.0.0.0:8000/index.html.
+The server by default hosts the root target (`/`) with `/index.html` so by going to 0.0.0.0:8000 is essentially the same as 0.0.0.0:8000/index.html, this can be modified by changing `TARGET_ROOT_TARGET` inside `target.c`.
 
 ## Demo
 Here is a demo of the server hosting my personal website:
