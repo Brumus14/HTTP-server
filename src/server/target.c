@@ -6,14 +6,28 @@
 #include <unistd.h>
 
 #define TARGET_TYPE_DEFAULT "application/octet-stream"
+#define TARGET_ROOT_TARGET "/index.html"
 
 const char *directory;
 unsigned long directory_length;
 
 char *target_get_path(const char *target) {
-    char *path = malloc((directory_length + strlen(target)) * sizeof(char));
+    char *real_target = NULL;
+
+    if (strcmp(target, "/") == 0) {
+        real_target = malloc((strlen(TARGET_ROOT_TARGET) + 1) * sizeof(char));
+        strcpy(real_target, TARGET_ROOT_TARGET);
+    } else {
+        real_target = malloc(strlen(target) * sizeof(char));
+        strcpy(real_target, target);
+    }
+
+    char *path =
+        malloc((directory_length + strlen(real_target)) * sizeof(char));
     strcpy(path, directory);
-    strcpy(path + directory_length, target);
+    strcpy(path + directory_length, real_target);
+
+    free(real_target);
 
     return path;
 }
@@ -122,11 +136,13 @@ const char *target_get_type(const char *target) {
     bool has_extension = false;
     const char *extension;
 
+    char *real_target = target_get_path(target);
+
     // Get the target extension if possible
-    for (int i = strlen(target) - 2; i > 0; i--) {
-        if (target[i] == '.') {
+    for (int i = strlen(real_target) - 2; i > 0; i--) {
+        if (real_target[i] == '.') {
             has_extension = true;
-            extension = &target[i + 1];
+            extension = &real_target[i + 1];
             break;
         }
     }
