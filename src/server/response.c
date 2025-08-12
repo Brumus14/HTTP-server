@@ -11,6 +11,7 @@
 
 #define STATUS_LINE_LENGTH 14
 #define DATE_STRING_LENGTH 29
+#define BODY_404 "404 Not Found"
 
 void http_response_init(http_response *response) {
     response->header_count = 0;
@@ -40,7 +41,29 @@ void http_response_add_header(http_response *response, http_field header) {
 
 void handle_get_request(const http_request *request, http_response *response) {
     // Add the targets content to the response body
-    target_get_content(request->target, &response->body, &response->body_size);
+    bool exists = target_get_content(request->target, &response->body,
+                                     &response->body_size);
+
+    // Target doesn't exist so return 404 response
+    // TODO: Abstract this and handle all error responses
+    if (!exists) {
+        response->status_code = 404;
+
+        response->body = malloc(strlen(BODY_404) + 1);
+        strcpy(response->body, BODY_404);
+        response->body_size = strlen(BODY_404);
+
+        http_response_add_header(response,
+                                 (http_field){"Content-Type", "text/plain"});
+
+        char *content_size = malloc(
+            (helper_digit_count(response->body_size) + 1) * sizeof(char));
+        sprintf(content_size, "%u", response->body_size);
+        http_response_add_header(response,
+                                 (http_field){"Content-Length", content_size});
+
+        return;
+    }
 
     // Get the content size as a string
     char *content_size =
@@ -61,23 +84,8 @@ void handle_get_request(const http_request *request, http_response *response) {
 }
 
 void handle_head_request(const http_request *request, http_response *response) {
-    unsigned int target_size = target_get_size(request->target);
-
-    char *content_size =
-        malloc(sizeof(char) * (helper_digit_count(target_size) + 1));
-    sprintf(content_size, "%u", target_size);
-
-    http_response_add_header(response,
-                             (http_field){"Content-Length", content_size});
-    free(content_size);
-
-    const char *target_type = target_get_type(request->target);
-    http_response_add_header(response,
-                             (http_field){"Content-Type", target_type});
-
-    char date_string[DATE_STRING_LENGTH + 1];
-    helper_get_gmt_time(date_string, sizeof(date_string));
-    http_response_add_header(response, (http_field){"Date", date_string});
+    handle_get_request(request, response);
+    response->body_size = 0;
 }
 
 // TODO: implement status codes properly
@@ -91,13 +99,6 @@ http_response http_response_generate(const http_request *request,
 
     if (!good_request) {
         response.status_code = 400;
-        return response;
-    }
-
-    if (!target_exists(request->target)) {
-        response.status_code = 404;
-        fprintf(stderr, "http_response_generate: Failed to resolve target %s\n",
-                request->target);
         return response;
     }
 

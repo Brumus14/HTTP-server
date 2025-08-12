@@ -64,12 +64,21 @@ bool server_bind(int server) {
 }
 
 // TODO: use more pointers to structs
-void handle_request(http_client client, char *request_string,
+bool handle_request(http_client client, char *request_string,
                     unsigned int request_string_length) {
+    bool close_connection = false;
+
     http_request request;
     http_request_init(&request);
     bool request_parse_result = http_request_parse(
         &request, request_string, request_string_length, client);
+
+    for (int i = 0; i < request.header_count; i++) {
+        if (strcmp(request.headers[i].name, "Connection") == 0 &&
+            strcmp(request.headers[i].value, "close") == 0) {
+            close_connection = true;
+        }
+    }
 
     http_response response =
         http_response_generate(&request, request_parse_result, client);
@@ -98,6 +107,8 @@ void handle_request(http_client client, char *request_string,
     free(response_string);
     http_response_destroy(&response);
     http_request_destroy(&request);
+
+    return close_connection;
 }
 
 void handle_client(http_client client) {
@@ -136,7 +147,12 @@ void handle_client(http_client client) {
         // The headers have been fully received
         if (request_end != NULL) {
             unsigned int request_size = (request_end - received_data + 4);
-            handle_request(client, received_data, request_size);
+            bool close_connection =
+                handle_request(client, received_data, request_size);
+
+            if (close_connection) {
+                return;
+            }
 
             // If also received part of another request
             if (request_size < total_recieved_size) {
