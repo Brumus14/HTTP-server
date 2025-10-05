@@ -1,7 +1,7 @@
 # HTTP-server
 Currently the server can host static websites without a backend and I may update the project to add backend support and some other features listed in todo.txt.
 
-The project is programmed purely in C and natively supports Linux, no external libraries have been used and only require C standard libraries and Linux headers.
+The project is programmed purely in C and natively supports Linux, no external libraries have been used and only require C standard libraries and Linux headers. It uses the HTTP 1.1 specification.
 
 It can be used cross-platform using Docker.
 
